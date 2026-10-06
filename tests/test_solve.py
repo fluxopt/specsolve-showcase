@@ -65,3 +65,24 @@ def test_an_existing_archive_is_refused_unless_replaced(runs: Path):
     with pytest.raises(Exception, match='already holds something'):
         solve('base', runs)
     solve('base', runs, replace=True)
+
+
+def test_a_reader_never_sees_an_archive_still_being_written(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Readers glob ``runs/*/…``, so anything the solve stages there is read as an archive.
+
+    The check runs at the moment specsolve packs the answer, when its scratch
+    copy is complete on disk and the archive has not landed yet.
+    """
+    import specsolve.strategy
+
+    seen = []
+    write = specsolve.strategy.write_archive
+
+    def watched(*args, **kwargs):
+        seen.extend(p.parents[1].name for p in tmp_path.glob('*/answer/record.parquet'))
+        return write(*args, **kwargs)
+
+    monkeypatch.setattr(specsolve.strategy, 'write_archive', watched)
+    solve('base', tmp_path)
+    assert seen == [], f'a reader of {tmp_path} saw these as archives mid-write: {seen}'
+    assert sorted(p.name for p in tmp_path.iterdir()) == ['base'], 'nothing is left beside the archive'
