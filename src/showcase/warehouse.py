@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -95,6 +96,29 @@ def bundle(runs: Path) -> bytes:
         zf.writestr('catalogue.json', json.dumps(listed.to_dicts(), indent=1))
         zf.writestr('spec.yaml', next(iter(sorted(runs.glob('*/spec.yaml')))).read_text())
     return out.getvalue()
+
+
+def publish(runs: Path, out: Path) -> None:
+    """Copy a directory of archives to ``out``, with every path stacked across them beside it.
+
+    ``out/<run>/<path>`` is each archive as the solve wrote it. ``out/<path>``
+    is ``read_parquet('<runs>/*/<path>')`` written down, one file for every
+    parquet path the archives hold, ``catalog.parquet`` included, because a
+    static host cannot answer a glob. Every row carries ``specsolve_run``, so
+    the stacked file loses nothing.
+
+    Raises:
+        FileExistsError: If ``out`` exists.
+    """
+    archives = sorted(p.parent for p in runs.glob('*/catalog.parquet'))
+    paths = sorted({p.relative_to(a).as_posix() for a in archives for p in a.rglob('*.parquet')})
+    out.mkdir(parents=True)
+    for archive in archives:
+        shutil.copytree(archive, out / archive.name)
+    for path in paths:
+        (out / path).parent.mkdir(parents=True, exist_ok=True)
+        glob = (runs.resolve() / '*' / path).as_posix()
+        duckdb.execute(f"copy (select * from read_parquet(?, union_by_name = true)) to '{out / path}'", [glob])
 
 
 def _union(runs: Path, member: str) -> pl.DataFrame:
