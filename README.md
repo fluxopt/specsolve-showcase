@@ -1,24 +1,24 @@
-# lpspec-showcase
+# specsolve-showcase
 
-An example of what you build on [lpspec](https://github.com/fluxopt/lpspec):
+An example of what you build on [specsolve](https://github.com/fluxopt/specsolve):
 a capacity-expansion planner, shaped the way a production application is: a **solve job** that writes
 archives, an **archive directory** that is the contract between the halves, and
 an **interactive site** that reads the archives in the browser and never
-imports lpspec. GitHub Actions runs the job and publishes the site to GitHub
+imports specsolve. GitHub Actions runs the job and publishes the site to GitHub
 Pages, so there is no server anywhere.
 
-**Live:** <https://fluxopt.github.io/lpspec-showcase/>
+**Live:** <https://fluxopt.github.io/specsolve-showcase/>
 
 ```text
 showcase-solve ──┐                                    ┌──▶ observable build ──▶ GitHub Pages
-   (lpspec)      ├──▶ runs/<scenario>/ ───────────────┤     (Python loaders)     (DuckDB-WASM
+   (specsolve)      ├──▶ runs/<scenario>/ ───────────────┤     (Python loaders)     (DuckDB-WASM
 showcase-serve ──┘      (parquet + yaml)              │                           + Plot
-   (lpspec, on request)                               ├──▶ clients/, a DuckDB shell, a notebook
+   (specsolve, on request)                               ├──▶ clients/, a DuckDB shell, a notebook
 showcase-grid ─────▶ grid/<point>/ ───────────────────┘
-   (lpspec, 110 points)  (the same archive)
+   (specsolve, 110 points)  (the same archive)
 ```
 
-The point of the repository is the middle box. lpspec archives a solve as tidy
+The point of the repository is the middle box. specsolve archives a solve as tidy
 parquet: one file per variable, dual and named expression, keyed by the model's
 own dimensions, with a `value` column. A directory of archives is therefore a
 table per glob, and anything that reads parquet is already a client. The site
@@ -28,7 +28,6 @@ the same directory.
 ## Run it
 
 Requires Python 3.12, [uv](https://docs.astral.sh/uv/) and Node 20 or later.
-lpspec is not on PyPI yet, so the `solve` extra pins it to a git tag.
 
 ```bash
 uv sync --all-extras
@@ -68,39 +67,39 @@ each a function that returns the model's sources. Only data differs:
 
 ## What the archive holds
 
-Every `runs/<scenario>/` is what `lps.solve_over(…, archive=)` wrote:
+Every `runs/<scenario>/` is what `sps.solve_over(…, archive=)` wrote:
 
 ```text
 runs/base/
-    model.yaml                          the spec, as solved
+    spec.yaml                           the spec, as solved
+    catalog.parquet                     (specsolve_run, path, name, kind, description, dtype, column, dim)
     sources/<name>.parquet              every input, as solved
-    sources.parquet                     (run, source, digest)
+    sources.parquet                     (specsolve_run, source, digest)
     axis.json                           how the sources were sliced
     answer/
-        objective.parquet               (year, status, termination_condition, objective, …, run)
-        metrics.parquet                 (year, rows, columns, nonzeros, build_seconds, solve_seconds, run)
-        primal/<variable>/<slice>.parquet     (year, <dims…>, value)
-        dual/<constraint>/<slice>.parquet     the same shape, for a shadow price
-        expression/<name>/<slice>.parquet     the same shape, for a named expression
+        record.parquet                  (slice_axis, slice, status, termination_condition, objective, …, specsolve_run)
+        metrics.parquet                 (slice_axis, slice, rows, columns, nonzeros, …, specsolve_run)
+        primal/<variable>.parquet       (year, <dims…>, value, specsolve_run)
+        dual/<constraint>.parquet       the same shape, for a shadow price
+        expression/<name>.parquet       the same shape, for a named expression
 ```
 
-Three rules make a directory of these a warehouse, and
+Two rules make a directory of these a warehouse, and
 [`src/showcase/warehouse.py`](src/showcase/warehouse.py) is the whole Python
 client:
 
-- **The record tables carry `run`** on every row, so they concatenate across
-  archives with `read_parquet('runs/*/answer/objective.parquet')`.
-- **A value frame carries the model's columns only.** `run` is derived from
-  the path, which DuckDB's `filename = true` gives for free.
-- **The catalogue is the tree.** Which quantities exist, and which dimensions
-  key each, is read off the directory names and the parquet schema. Nothing is
+- **Every file carries `specsolve_run`**, the archive's directory name, so
+  any one of them concatenates across archives with a single glob, such as
+  `read_parquet('runs/*/answer/primal/total.parquet')`.
+- **The archive carries its catalogue.** `catalog.parquet` lists every
+  quantity, its kind, its path and the dimensions that key it. Nothing is
   declared twice.
 
 From a DuckDB shell, the same directory:
 
 ```sql
-select run, year, objective
-from read_parquet('runs/*/answer/objective.parquet', union_by_name = true)
+select specsolve_run as run, slice::integer as year, objective
+from read_parquet('runs/*/answer/record.parquet', union_by_name = true)
 order by run, year;
 ```
 
@@ -134,7 +133,7 @@ A second loader, [`site/src/model.md.py`](site/src/model.md.py), prints a
 whole page: the spec out of the archive, typeset as equations by the
 language's own `to_markdown`, in the notation
 [`models/pathway.symbols.yaml`](models/pathway.symbols.yaml) declares. A
-symbol that names nothing in the model fails the build. It imports [math-spec](https://github.com/energy-models/math-spec),
+symbol that names nothing in the model fails the build. It imports [mathspec](https://github.com/energy-models/mathspec),
 the language package, which has no solver in it. No data binds and nothing is
 solved to produce that page, so the math it shows is exactly what the YAML
 states, and the other pages show what the solver made of it.
@@ -145,7 +144,7 @@ what the solver made of it: how many rows a constraint has, how many of them
 carry a non-zero price, and the largest price among them; what a named
 expression came to in each period; what a variable was free to choose. The
 join is [`src/showcase/annex.py`](src/showcase/annex.py), which imports no
-lpspec — the equations come from math-spec and the numbers come from the
+specsolve — the equations come from mathspec and the numbers come from the
 parquet. An annex is about one run, and any of them prints:
 
 ```bash
@@ -153,7 +152,7 @@ uv run showcase-annex carbon_cap --runs runs
 ```
 
 That stitching is the whole reason
-[`fluxopt/lpspec#1648`](https://github.com/fluxopt/lpspec/issues/1648) is open:
+[`fluxopt/specsolve#1648`](https://github.com/fluxopt/specsolve/issues/1648) is open:
 the typesetter renders a model, the result frames carry the answer, and holding
 one against the other is left to every caller that wants the page.
 
@@ -187,13 +186,13 @@ in the catalogue and hands one to a
 [Perspective](https://perspective.finos.org/) pivot table, keyed by the
 dimensions it reads off the parquet: the model's own dimensions group the rows,
 the scenario splits the columns, and re-pivoting, filtering and charting are
-the component's, not the page's. Point the solve job at a different lpspec
+the component's, not the page's. Point the solve job at a different specsolve
 model and that page shows it unchanged. That is the property this repository
 exists to demonstrate.
 
 ## The modelling session
 
-The site is what lpspec produces unattended. [`notebooks/session.py`](notebooks/session.py)
+The site is what specsolve produces unattended. [`notebooks/session.py`](notebooks/session.py)
 is the other half: a [marimo](https://marimo.io) notebook in which the model
 is a document you edit by hand. A dispatch model sits in a code cell; change
 it and the typeset math, the validation and the solve all re-run, because
@@ -208,8 +207,8 @@ The site's **Session** page runs the notebook in the browser: in run mode by
 default, where the model, the data and the sliders are live and the code is
 out of sight, and in edit mode one link away.
 marimo's WASM export loads Python through Pyodide, whose distribution carries highspy, polars
-and the rest of lpspec's dependencies; lpspec and math-spec are not on PyPI, so
-`tools/wasm_bundle.py` builds them as wheels and puts them beside the page,
+and the rest of specsolve's dependencies. `tools/wasm_bundle.py` puts specsolve
+and mathspec, at the versions locked here, and this repository's own wheel beside the page,
 with the pathway model, and the notebook's first cell installs them when it
 finds itself under Pyodide. Nothing runs on a server. The page also links the
 notebook as it ran at the last build, a static export, as the fallback.
@@ -221,11 +220,11 @@ notebook as it ran at the last build, a static export, as the fallback.
 - the archive holds the tree above, every period solved to optimality, and
   each period started from the fleet the last one left;
 - the warehouse queries name the run on every row, list the catalogue from the
-  tree, and name `invest` as the one input `cheap_solar` changed;
+  archive's own `catalog.parquet`, and name `invest` as the one input `cheap_solar` changed;
 - every point of the what-if grid supplies the model's inputs, caps only the
   last period, and archives the cap and solar cost the page keys it by; the
   grid's loader ships the tables the page reads;
-- nothing past the solve job imports lpspec; the site's data loader ships every
+- nothing past the solve job imports specsolve; the site's data loader ships every
   table the pages read, or says what is missing; and the model page prints the
   archived spec as TeX in the site's own delimiters;
 - the notebook runs top to bottom and exports with both solves optimal.
@@ -255,7 +254,7 @@ What that costs is history. An archive is keyed by scenario, so re-solving one
 replaces it, and the registry says what is there now rather than what has ever
 been asked for. Keeping the second thing is a run registry, and a run registry
 is a table about people and process rather than about the model — it is not in
-this repository and it is not in lpspec.
+this repository and it is not in specsolve.
 
 ## What it is not
 

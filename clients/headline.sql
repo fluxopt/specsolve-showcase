@@ -9,32 +9,31 @@
 -- The first statement is why a wrong directory or a missing archive says which
 -- of those two to run, rather than reporting a path that does not exist.
 --
--- The record tables carry `run` already. A value frame carries the model's own
--- columns only, so `run` comes off the path, which `filename = true` gives.
--- Point the four globs at another directory and the query is unchanged.
+-- Every file carries `specsolve_run`, the archive's directory name, so the
+-- globs concatenate across archives as they stand. The record names its period
+-- in `slice`, as text. Point the globs at another directory and the query is
+-- unchanged.
 select error('no archive under runs/ — run `uv run showcase-solve --runs runs` first, from the repository root')
-from (select 1) where (select count(*) from glob('runs/*/answer/objective.parquet')) = 0;
+from (select 1) where (select count(*) from glob('runs/*/answer/record.parquet')) = 0;
 
 with objective as (
-    select run, year, objective
-    from read_parquet('runs/*/answer/objective.parquet', union_by_name = true)
+    select specsolve_run as run, slice::integer as year, objective
+    from read_parquet('runs/*/answer/record.parquet', union_by_name = true)
 ),
 period as (select run, min(year) as first, max(year) as last from objective group by run),
 value_of as (
-    select regexp_extract(filename, '([^/]+)/answer/', 1) as run, quantity, year, generator, value from (
-        select filename, 'emissions' as quantity, year, null as generator, value
-            from read_parquet('runs/*/answer/expression/emissions/*.parquet', filename = true)
-        union all by name
-        select filename, 'carbon' as quantity, year, null as generator, value
-            from read_parquet('runs/*/answer/dual/carbon/*.parquet', filename = true)
-        union all by name
-        select filename, 'total' as quantity, year, generator, value
-            from read_parquet('runs/*/answer/primal/total/*.parquet', filename = true)
-    )
+    select specsolve_run as run, 'emissions' as quantity, year, null as generator, value
+        from read_parquet('runs/*/answer/expression/emissions.parquet')
+    union all by name
+    select specsolve_run as run, 'carbon' as quantity, year, null as generator, value
+        from read_parquet('runs/*/answer/dual/carbon.parquet')
+    union all by name
+    select specsolve_run as run, 'total' as quantity, year, generator, value
+        from read_parquet('runs/*/answer/primal/total.parquet')
 ),
 clean as (
-    select regexp_extract(filename, '([^/]+)/sources/', 1) as run, generator
-    from read_parquet('runs/*/sources/rate.parquet', filename = true)
+    select specsolve_run as run, generator
+    from read_parquet('runs/*/sources/rate.parquet')
     where value = 0
 )
 select

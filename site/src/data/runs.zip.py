@@ -13,6 +13,6 @@ from pathlib import Path
 from showcase import warehouse
 
 runs = Path(os.environ.get('SHOWCASE_RUNS', '../runs'))
-if not any(runs.glob('*/answer/objective.parquet')):
+if not any(runs.glob('*/answer/record.parquet')):
     sys.exit(f'{runs.resolve()} holds no archive: run `showcase-solve --runs {runs}` first')
 sys.stdout.buffer.write(warehouse.bundle(runs))

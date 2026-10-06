@@ -50,7 +50,7 @@ def test_the_client_needs_nothing_this_repository_ships():
             imported.update(alias.name.split('.')[0] for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module.split('.')[0])
-    assert imported == {'sys', 'pathlib', 'polars'}, 'no lpspec, no showcase warehouse, no client library'
+    assert imported == {'sys', 'pathlib', 'polars'}, 'no specsolve, no showcase warehouse, no client library'
 
 
 def test_a_scenario_that_binds_its_cap_prices_carbon(runs: Path):
@@ -79,7 +79,7 @@ def test_the_clients_page_teaches_the_archive_rather_than_printing_a_result(runs
 
     for kind in ('primal/', 'dual/', 'expression/'):
         assert kind in page, f'the tree names {kind}, which is what the archive is made of'
-    assert 'model.yaml' in page and 'sources.parquet' in page
+    assert 'spec.yaml' in page and 'sources.parquet' in page
 
     assert page.count('```sql id=') == 2, 'the two record queries are live, and their SQL is shown'
     assert 'DuckDBClient.of(' in page and 'db.query(typed)' in page, 'and the last one is editable'

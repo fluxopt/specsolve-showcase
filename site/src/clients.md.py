@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 runs = Path(os.environ.get('SHOWCASE_RUNS', '../runs'))
-archives = sorted(p.parent.name for p in runs.glob('*/model.yaml'))
+archives = sorted(p.parent.name for p in runs.glob('*/spec.yaml'))
 if not archives:
     sys.exit(f'{runs.resolve()} holds no archive: run `showcase-solve --runs {runs}` first')
 
@@ -27,19 +27,19 @@ def tree(root: Path) -> str:
     """The archive's shape rather than its file list: what each directory is for, and how much of it there is."""
     answer = root / 'answer'
     rows = [
-        ('├── model.yaml', kb(root / 'model.yaml'), 'the spec, as solved'),
-        ('├── sources.parquet', kb(root / 'sources.parquet'), '(run, source, digest)'),
+        ('├── spec.yaml', kb(root / 'spec.yaml'), 'the spec, as solved'),
+        ('├── catalog.parquet', kb(root / 'catalog.parquet'), 'every name, its kind, path and dimensions'),
+        ('├── sources.parquet', kb(root / 'sources.parquet'), '(specsolve_run, source, digest)'),
         ('├── sources/', f'{len(list((root / "sources").glob("*.parquet")))} files', 'every input, as solved'),
         ('└── answer/', '', ''),
-        ('    ├── objective.parquet', kb(answer / 'objective.parquet'), 'one row per period: status, objective'),
+        ('    ├── record.parquet', kb(answer / 'record.parquet'), 'one row per period: status, objective'),
         ('    ├── metrics.parquet', kb(answer / 'metrics.parquet'), 'one row per period: size, seconds'),
     ]
     kinds = [d for d in ('primal', 'dual', 'expression') if (answer / d).is_dir()]
     for index, kind in enumerate(kinds):
-        quantities = sorted(q.name for q in (answer / kind).iterdir() if q.is_dir())
-        slices = len(list((answer / kind / quantities[0]).glob('*.parquet')))
+        quantities = sorted(q.stem for q in (answer / kind).glob('*.parquet'))
         elbow = '    └──' if index == len(kinds) - 1 else '    ├──'
-        rows.append((f'{elbow} {kind}/', f'{len(quantities)}', f'{", ".join(quantities)} — {slices} slices each'))
+        rows.append((f'{elbow} {kind}/', f'{len(quantities)} files', ', '.join(quantities)))
     return '\n'.join(f'{name:<28}{size:>9}   {gloss}'.rstrip() for name, size, gloss in rows)
 
 
@@ -48,7 +48,7 @@ sources = {name: (ROOT / 'clients' / name).read_text().rstrip() for name in ('he
 sys.stdout.write(f"""---
 title: Clients
 sql:
-  objective: ./data/runs/objective.parquet
+  objective: ./data/runs/record.parquet
   metrics: ./data/runs/metrics.parquet
   digests: ./data/runs/sources.parquet
   total: ./data/runs/primal/total.parquet
@@ -63,18 +63,18 @@ Every result below is a real query, run by DuckDB in your browser against the sa
 
 ## What the solve job wrote
 
-One archive per scenario. This is `{run}`, by shape rather than by file — every quantity is its own directory of per-period slices:
+One archive per scenario. This is `{run}`, by shape rather than by file — every quantity is one file, every period in it:
 
 ```text
 runs/{run}/
 {tree(runs / run)}
 ```
 
-Three kinds of thing are in there. **`model.yaml` and `sources/`** are what was solved — the spec and every input, so the run reproduces. **`answer/`** is what came back: `primal/` per variable, `dual/` per constraint, `expression/` per named quantity, one directory each. **`objective.parquet`, `metrics.parquet` and `sources.parquet`** are the record: one row per period saying how it terminated, what it cost to build and solve, and what each input's bytes digest to.
+Three kinds of thing are in there. **`spec.yaml` and `sources/`** are what was solved — the spec and every input, so the run reproduces. **`answer/`** is what came back: `primal/` per variable, `dual/` per constraint, `expression/` per named quantity, one file each. **`record.parquet`, `metrics.parquet` and `sources.parquet`** are the record: one row per period saying how it terminated, what it cost to build and solve, and what each input's bytes digest to.
 
 ## What a query gets back
 
-A value frame carries the model's own dimensions and a `value`. Nothing else, and no index:
+A value frame carries the model's own dimensions, a `value`, and the run it came from. Nothing else, and no index:
 
 ```sql id=shape
 select * from total order by run, year, generator limit 6
@@ -86,9 +86,9 @@ display(Inputs.table(shape, {{maxHeight: 220}}));
 
 Those column names — `year`, `generator` — are the model's, not this repository's. They come from the spec that was solved, which is why a reader who has never seen the model can still group by `generator`, and why two quantities keyed the same way join without a mapping table.
 
-## Three rules, one query each
+## Two rules, one query each
 
-**The record tables carry `run` on every row**, so they concatenate across archives with a single glob and need no path parsing:
+**Every file carries `specsolve_run`**, the archive's directory name, so any file concatenates across archives with a single glob and needs no path parsing. The site's loader calls it `run`, and reads the period off the record's `slice`:
 
 ```sql id=records
 select run, year, termination_condition, round(objective) as objective from objective order by run, year limit 5
@@ -98,9 +98,7 @@ select run, year, termination_condition, round(objective) as objective from obje
 display(Inputs.table(records, {{maxHeight: 200}}));
 ```
 
-**A value frame does not carry `run`**, because it carries the model's columns only. Reading across archives, you derive it from the path — `filename = true` in DuckDB, one `regexp_extract`. The site's loader has already done that here, which is why `run` is a column above.
-
-**The catalogue is the tree.** Which quantities exist and which dimensions key each is read off the directory names and the parquet schema. Nothing is declared twice:
+**The archive carries its own catalogue.** `catalog.parquet` lists every quantity, its kind, its path and the dimensions that key it, written by the solve. Nothing is declared twice:
 
 ```js
 const catalogue = await FileAttachment("data/runs.zip").zip().then((z) => z.file("catalogue.json")).then((f) => f.json());
@@ -113,7 +111,7 @@ The tables above are registered; edit the query and it re-runs. `objective`, `me
 
 ```js
 const db = await DuckDBClient.of({{
-  objective: FileAttachment("data/runs/objective.parquet"),
+  objective: FileAttachment("data/runs/record.parquet"),
   metrics: FileAttachment("data/runs/metrics.parquet"),
   digests: FileAttachment("data/runs/sources.parquet"),
   total: FileAttachment("data/runs/primal/total.parquet"),
@@ -138,7 +136,7 @@ display(answer);
 
 ## The same thing, in your own tools
 
-Neither of these imports lpspec, and neither imports this repository's `warehouse.py`. Both answer the four numbers the [pathway page](./) leads with, and `tests/test_clients.py` holds them to each other on every archive in the directory — so a drift between them fails CI rather than reaching this page.
+Neither of these imports specsolve, and neither imports this repository's `warehouse.py`. Both answer the four numbers the [pathway page](./) leads with, and `tests/test_clients.py` holds them to each other on every archive in the directory — so a drift between them fails CI rather than reaching this page.
 
 <details><summary><b>Ten lines of polars</b> — <code>uv run python clients/headline.py runs/{run}</code></summary>
 

@@ -30,10 +30,10 @@ export default {
     ".py": ["uv", "run", "--project", "..", "python"],
   },
   header: `<div style="border: 1px solid var(--theme-foreground-faintest); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.5;">
-    <strong>An example of what you build on <a href="https://github.com/fluxopt/lpspec">lpspec</a>.</strong>
+    <strong>An example of what you build on <a href="https://github.com/fluxopt/specsolve">specsolve</a>.</strong>
     A capacity-expansion planner: the model is ${model} lines of YAML, the job that solves and archives it ${job} lines of Python,
     this site ${pages} lines of Markdown and SQL over the parquet the job wrote, and the notebook ${notebook} lines.
-    All of it is in <a href="https://github.com/fluxopt/lpspec-showcase">the source</a>; nothing else is behind it.
+    All of it is in <a href="https://github.com/fluxopt/specsolve-showcase">the source</a>; nothing else is behind it.
   </div>`,
-  footer: `An example application built on <a href="https://github.com/fluxopt/lpspec">lpspec</a> · <a href="https://github.com/fluxopt/lpspec-showcase">source</a>`,
+  footer: `An example application built on <a href="https://github.com/fluxopt/specsolve">specsolve</a> · <a href="https://github.com/fluxopt/specsolve-showcase">source</a>`,
 };

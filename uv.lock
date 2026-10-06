@@ -80,7 +80,7 @@ name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy' and sys_platform != 'emscripten'" },
+    { name = "pycparser" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be", size = 530807, upload-time = "2026-08-03T21:21:18.939Z" }
 wheels = [
@@ -449,73 +449,6 @@ wheels = [
 ]
 
 [[package]]
-name = "lpspec"
-version = "0.0.1a333"
-source = { git = "https://github.com/fluxopt/lpspec?rev=v0.0.1-alpha.333#dd4a857521d1baa6fe307f0fd1a758b7a3be85ed" }
-dependencies = [
-    { name = "highspy" },
-    { name = "math-spec" },
-    { name = "numpy" },
-    { name = "polars" },
-]
-
-[[package]]
-name = "lpspec-showcase"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "duckdb" },
-    { name = "polars" },
-    { name = "pyarrow" },
-]
-
-[package.optional-dependencies]
-lab = [
-    { name = "altair" },
-    { name = "lpspec" },
-    { name = "marimo" },
-]
-server = [
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "lpspec" },
-    { name = "uvicorn" },
-]
-solve = [
-    { name = "lpspec" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pip" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "altair", marker = "extra == 'lab'", specifier = ">=5.4" },
-    { name = "duckdb", specifier = ">=1.3" },
-    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115" },
-    { name = "httpx", marker = "extra == 'server'", specifier = ">=0.27" },
-    { name = "lpspec", marker = "extra == 'solve'", git = "https://github.com/fluxopt/lpspec?rev=v0.0.1-alpha.333" },
-    { name = "lpspec-showcase", extras = ["solve"], marker = "extra == 'lab'" },
-    { name = "lpspec-showcase", extras = ["solve"], marker = "extra == 'server'" },
-    { name = "marimo", marker = "extra == 'lab'", specifier = ">=0.15" },
-    { name = "polars", specifier = ">=1.30" },
-    { name = "pyarrow", specifier = ">=17" },
-    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.30" },
-]
-provides-extras = ["solve", "lab", "server"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pip", specifier = ">=24" },
-    { name = "pytest", specifier = ">=8" },
-    { name = "ruff", specifier = ">=0.12" },
-]
-
-[[package]]
 name = "marimo"
 version = "0.24.2"
 source = { registry = "https://pypi.org/simple" }
@@ -618,13 +551,17 @@ wheels = [
 ]
 
 [[package]]
-name = "math-spec"
-version = "0.0.0a88"
-source = { git = "https://github.com/energy-models/math-spec?rev=v0.0.0-alpha.88#5656b11b64b20875a8c59cf258635067b870ce3f" }
+name = "mathspec"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyparsing" },
     { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/e7/ec27d31d40a19232393ca7f6ef0fe8f0aab0302c149ce9c1261346716cf1/mathspec-0.2.1.tar.gz", hash = "sha256:18bfeff047ebb675a62f1a98bf9623154aac7dd99b66dc38660685cf1da2b097", size = 171966, upload-time = "2026-10-01T12:52:14.891Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/d8/36bf56eb6aa5475a6c6b8f146fdf7b8d707fdbe79d3823b8e9307e16dd51/mathspec-0.2.1-py3-none-any.whl", hash = "sha256:0f05dace4d460e50589c17c35621aff769de764572b868f529c89a511131b279", size = 179991, upload-time = "2026-10-01T12:52:13.24Z" },
 ]
 
 [[package]]
@@ -1083,7 +1020,7 @@ name = "pyzmq"
 version = "27.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "implementation_name == 'pypy' and sys_platform != 'emscripten'" },
+    { name = "cffi", marker = "implementation_name == 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e7/8d/5b3d5631c2f4b4b8862f64cd0c9eb777b5710eeb5125b4be8dd0a200a4c0/pyzmq-27.2.0.tar.gz", hash = "sha256:54d4259d1bfae24ecdb5ca79f7acc2eac6c286a02d6a0ae617797cb45f0726d3", size = 292316, upload-time = "2026-08-20T19:08:21.19Z" }
 wheels = [
@@ -1259,6 +1196,77 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/ea/7f9b938a63ece4bec677ad7f9f7fa02df3383db1949ed93a382441c09a87/ruff-0.16.7-py3-none-win32.whl", hash = "sha256:2ea3470fcebcbc5df2fb0c6f3b90333fa9084c534e0111c038fa4a6ab9f1c4b7", size = 10059082, upload-time = "2026-09-10T18:03:59.632Z" },
     { url = "https://files.pythonhosted.org/packages/39/11/480a6973a927aa653e1cead6a6416008640e03a99d05b34c0434b8c6c366/ruff-0.16.7-py3-none-win_amd64.whl", hash = "sha256:7ac26aca826e9e21d0f1cb25b54ac660760a9fdd094d3e4df9848232be98cfc6", size = 10593368, upload-time = "2026-09-10T18:04:01.999Z" },
     { url = "https://files.pythonhosted.org/packages/8b/4b/51327018d056f0dad2c2238f26d1fb0f53707a9d91b75dea6d1b3039f136/ruff-0.16.7-py3-none-win_arm64.whl", hash = "sha256:aab7f39e2c9df6c596216070f98eef1207b94f8516cca20c808826974971855b", size = 10412401, upload-time = "2026-09-10T18:04:04.098Z" },
+]
+
+[[package]]
+name = "specsolve"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "highspy" },
+    { name = "mathspec" },
+    { name = "numpy" },
+    { name = "polars" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/27/5b/20e7860c600e0cd2487ad46939a4007295137c323e0ababca35e3f487313/specsolve-0.6.1.tar.gz", hash = "sha256:e8369345bdafa0b69f3e86ba4c8df8b55992730b750f31e5bcd470f34da1810f", size = 151647, upload-time = "2026-10-06T15:52:49.002Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/9e/932e94a1f3aa0d3ab8ef9c8d6a37ed28c1a8c26b2f7a3a8ab383d046757d/specsolve-0.6.1-py3-none-any.whl", hash = "sha256:8de0ee9e1f6f9345dd9eaf3998acd0986dd710311f73e8743ab8eb952671fff4", size = 182562, upload-time = "2026-10-06T15:52:47.331Z" },
+]
+
+[[package]]
+name = "specsolve-showcase"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "duckdb" },
+    { name = "polars" },
+    { name = "pyarrow" },
+]
+
+[package.optional-dependencies]
+lab = [
+    { name = "altair" },
+    { name = "marimo" },
+    { name = "specsolve" },
+]
+server = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "specsolve" },
+    { name = "uvicorn" },
+]
+solve = [
+    { name = "specsolve" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pip" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "altair", marker = "extra == 'lab'", specifier = ">=5.4" },
+    { name = "duckdb", specifier = ">=1.3" },
+    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115" },
+    { name = "httpx", marker = "extra == 'server'", specifier = ">=0.27" },
+    { name = "marimo", marker = "extra == 'lab'", specifier = ">=0.15" },
+    { name = "polars", specifier = ">=1.30" },
+    { name = "pyarrow", specifier = ">=17" },
+    { name = "specsolve", marker = "extra == 'solve'", specifier = ">=0.6.1,<0.7" },
+    { name = "specsolve-showcase", extras = ["solve"], marker = "extra == 'lab'" },
+    { name = "specsolve-showcase", extras = ["solve"], marker = "extra == 'server'" },
+    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.30" },
+]
+provides-extras = ["solve", "lab", "server"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pip", specifier = ">=24" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "ruff", specifier = ">=0.12" },
 ]
 
 [[package]]

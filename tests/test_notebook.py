@@ -17,6 +17,6 @@ def test_the_session_runs_and_solves():
     _, defs = load_app().run()
     assert defs['problem'] is None, 'the model as shipped is accepted by the language'
     assert defs['result'].termination_condition == 'optimal'
-    assert defs['runs'].objective['termination_condition'].unique().to_list() == ['optimal'], (
+    assert defs['runs'].record['termination_condition'].unique().to_list() == ['optimal'], (
         'every period of the pathway solved'
     )

@@ -20,7 +20,7 @@ def test_a_value_frame_names_its_run(runs: Path):
     assert table['run'].unique().sort().to_list() == SCENARIOS
 
 
-def test_the_catalogue_is_read_off_the_tree(runs: Path):
+def test_the_catalogue_is_read_off_the_archive(runs: Path):
     table = warehouse.catalogue(runs)
     listed = {(row['kind'], row['name']): row['dims'] for row in table.iter_rows(named=True)}
     assert listed[('primal', 'p')] == ['year', 'day', 'hour', 'generator']

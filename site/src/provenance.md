@@ -1,7 +1,7 @@
 ---
 title: Provenance
 sql:
-  objective: ./data/runs/objective.parquet
+  objective: ./data/runs/record.parquet
   metrics: ./data/runs/metrics.parquet
   sources: ./data/runs/sources.parquet
 ---
@@ -52,5 +52,5 @@ select run, year::integer as year, columns, rows, nonzeros, build_seconds, solve
 
 <div class="card">
   <h2>The model, as solved</h2>
-  <pre>${await FileAttachment("data/runs/model.yaml").text()}</pre>
+  <pre>${await FileAttachment("data/runs/spec.yaml").text()}</pre>
 </div>

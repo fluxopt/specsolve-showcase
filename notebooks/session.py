@@ -5,7 +5,7 @@
 # ]
 # ///
 
-# A modelling session on lpspec, as a marimo notebook.
+# A modelling session on specsolve, as a marimo notebook.
 #
 #   uv run marimo edit notebooks/session.py      # live: edit the YAML, the data, the sliders
 #   uv run python notebooks/session.py           # top to bottom, as a script
@@ -18,7 +18,7 @@
 import marimo
 
 __generated_with = '0.24.2'
-app = marimo.App(width='medium', app_title='A modelling session on lpspec')
+app = marimo.App(width='medium', app_title='A modelling session on specsolve')
 
 
 @app.cell(hide_code=True)
@@ -28,7 +28,7 @@ async def _():
     pathway_text = None
     notice = None
     if sys.platform == 'emscripten':
-        # In the browser: lpspec and math-spec are not on PyPI, so their wheels sit beside this page.
+        # In the browser: specsolve, mathspec and this repository's wheel sit beside this page, at the versions locked.
         import json
 
         import marimo as _mo
@@ -60,12 +60,12 @@ def _(ready):
     import re
 
     import altair as alt
-    import lpspec as lps
     import marimo as mo
-    import math_spec as ms
+    import mathspec as ms
     import polars as pl
+    import specsolve as sps
 
-    return alt, lps, mo, ms, pl, re
+    return alt, mo, ms, pl, re, sps
 
 
 @app.cell(hide_code=True)
@@ -82,10 +82,10 @@ def _(alt):
 def _(mo):
     mo.callout(
         mo.md(
-            'An example of what you build on [lpspec](https://github.com/fluxopt/lpspec): a modelling session where the '
-            'model is a document, the data is a table, and every answer is a table too. lpspec runs unchanged, here in '
+            'An example of what you build on [specsolve](https://github.com/fluxopt/specsolve): a modelling session where the '
+            'model is a document, the data is a table, and every answer is a table too. specsolve runs unchanged, here in '
             'your browser or on a machine of your own. '
-            '[The source](https://github.com/fluxopt/lpspec-showcase/blob/main/notebooks/session.py) is one file.'
+            '[The source](https://github.com/fluxopt/specsolve-showcase/blob/main/notebooks/session.py) is one file.'
         ),
         kind='info',
     )
@@ -96,9 +96,9 @@ def _(mo):
 def _(mo):
     mo.md(
         r"""
-        # A modelling session on lpspec
+        # A modelling session on specsolve
 
-        In lpspec the model is a document: a YAML file that says what the variables,
+        In specsolve the model is a document: a YAML file that says what the variables,
         constraints and objective *are*. Nothing below is a builder. Edit the file in
         the cell that holds it and every cell that reads it re-runs: the math is
         typeset again, the file is checked again, and the solve runs again on the
@@ -164,10 +164,10 @@ objective:
 
 
 @app.cell(hide_code=True)
-def _(lps, mo, model, ms):
+def _(mo, model, ms, sps):
     try:
         spec = ms.to_spec(model.value)
-        lps.check(model.value)
+        sps.check(model.value)
         problem = None
     except Exception as error:  # a LanguageError names the rewrite; show it where the author is looking
         spec = None
@@ -179,7 +179,7 @@ def _(lps, mo, model, ms):
 @app.cell(hide_code=True)
 def _(mo, ms, re, spec):
     def typeset(spec):
-        """math-spec prints GitHub's math delimiters; marimo's Markdown reads TeX's."""
+        """mathspec prints GitHub's math delimiters; marimo's Markdown reads TeX's."""
         text = ms.to_markdown(spec, legend=False)
         text = re.sub(r'```math\n(.*?)\n```', lambda m: f'$$\n{m.group(1)}\n$$', text, flags=re.S)
         return re.sub(r'\$`(.+?)`\$', lambda m: f'${m.group(1)}$', text)
@@ -230,9 +230,9 @@ def _(cost, generators, load_scale, pl):
 
 
 @app.cell
-def _(lps, mo, model, sources, spec):
+def _(mo, model, sources, spec, sps):
     result = (
-        lps.solve(model.value, {k: v for k, v in sources.items() if k in {*spec.parameters, *spec.dimensions}})
+        sps.solve(model.value, {k: v for k, v in sources.items() if k in {*spec.parameters, *spec.dimensions}})
         if spec
         else None
     )
@@ -304,7 +304,7 @@ def _(mo):
 
 
 @app.cell
-def _(cap_2045, lps, pathway_text, solar_factor):
+def _(cap_2045, pathway_text, solar_factor, sps):
     from showcase.scenarios import INVEST, YEARS
     from showcase.scenarios import sources as pathway_sources
     from showcase.solve import MODEL
@@ -312,8 +312,8 @@ def _(cap_2045, lps, pathway_text, solar_factor):
     pathway = pathway_text or MODEL.read_text()
     invest = {y: {**INVEST[y], 'solar': INVEST[y]['solar'] * solar_factor.value} for y in YEARS}
     cap = {y: (cap_2045.value if y == YEARS[-1] else 1e12) for y in YEARS}
-    runs = lps.solve_over(
-        pathway, pathway_sources(invest=invest, cap=cap), lps.EachCoordinate('year'), carry={'existing': 'total'}
+    runs = sps.solve_over(
+        pathway, pathway_sources(invest=invest, cap=cap), sps.EachCoordinate('year'), carry={'existing': 'total'}
     )
     return (runs,)
 
@@ -333,7 +333,7 @@ def _(alt, by_technology, mo, runs):
         .properties(width=380, height=220, title='Emissions per period')
     )
     mo.vstack(
-        [mo.hstack([fleet, emitted]), mo.ui.table(runs.objective.select('year', 'termination_condition', 'objective'))]
+        [mo.hstack([fleet, emitted]), mo.ui.table(runs.record.select('year', 'termination_condition', 'objective'))]
     )
     return
 
