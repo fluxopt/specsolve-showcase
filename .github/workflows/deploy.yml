@@ -44,6 +44,8 @@ jobs:
         working-directory: site
         env:
           OBSERVABLE_TELEMETRY_DISABLE: "true"
+      # The archives themselves, beside the site, for any client that reads parquet over HTTP.
+      - run: uv run python -m tools.publish_archive site/dist/archive runs grid
       # The notebook, executable in the browser: marimo's WASM export, with our
       # wheels and the pathway model beside it, published under the site.
       - run: uv run marimo export html-wasm notebooks/session.py -o site/dist/session-app --mode run --execute --no-sandbox
