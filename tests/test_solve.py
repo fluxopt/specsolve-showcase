@@ -32,28 +32,27 @@ def test_every_scenario_is_a_function_of_nothing():
 def test_the_archive_holds_the_contract(runs: Path):
     for name in SOLVED:
         archive = runs / name
-        assert (archive / 'model.yaml').exists()
+        assert (archive / 'spec.yaml').exists()
         assert (archive / 'sources.parquet').exists()
-        assert (archive / 'answer' / 'objective.parquet').exists()
+        assert (archive / 'answer' / 'record.parquet').exists()
         assert (archive / 'answer' / 'sweep.json').exists(), 'a sweep archive carries its manifest'
-        assert len(list((archive / 'answer' / 'primal' / 'total').glob('*.parquet'))) == len(YEARS), (
-            'one frame per period'
-        )
+        total = pl.read_parquet(archive / 'answer' / 'primal' / 'total.parquet')
+        assert sorted(total['year'].unique()) == YEARS, 'one frame holds every period'
 
 
 def test_every_period_solved(runs: Path):
     for name in SOLVED:
-        table = pl.read_parquet(runs / name / 'answer' / 'objective.parquet')
-        assert table['year'].to_list() == YEARS, 'the periods come back in order'
+        table = pl.read_parquet(runs / name / 'answer' / 'record.parquet')
+        assert table['slice'].cast(pl.Int64).to_list() == YEARS, 'the periods come back in order'
         assert table['termination_condition'].unique().to_list() == ['optimal']
-        assert table['run'].unique().to_list() == [name], 'the record names the archive it sits in'
+        assert table['specsolve_run'].unique().to_list() == [name], 'the record names the archive it sits in'
 
 
 def test_each_period_inherits_the_last_fleet(runs: Path):
     """What a period started from is what the last one ended with: total - build == previous total."""
-    total = pl.read_parquet(runs / 'base' / 'answer' / 'primal' / 'total' / '*.parquet')
-    build = pl.read_parquet(runs / 'base' / 'answer' / 'primal' / 'build' / '*.parquet')
-    started_from = total.join(build, on=['year', 'generator'], suffix='_built').with_columns(
+    total = pl.read_parquet(runs / 'base' / 'answer' / 'primal' / 'total.parquet')
+    build = pl.read_parquet(runs / 'base' / 'answer' / 'primal' / 'build.parquet')
+    started_from = total.join(build, on=['year', 'generator', 'specsolve_run'], suffix='_built').with_columns(
         (pl.col('value') - pl.col('value_built')).alias('inherited')
     )
     for earlier, later in itertools.pairwise(YEARS):

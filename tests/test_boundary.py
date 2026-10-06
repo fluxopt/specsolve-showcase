@@ -1,4 +1,4 @@
-"""Nothing past the solve job imports lpspec, and the site's loader ships what the pages read."""
+"""Nothing past the solve job imports specsolve, and the site's loader ships what the pages read."""
 
 import ast
 import os
@@ -29,8 +29,8 @@ def imported_by(module: Path) -> set[str]:
 
 
 @pytest.mark.parametrize('module', READERS, ids=lambda p: p.name)
-def test_a_reader_imports_no_lpspec(module: Path):
-    assert 'lpspec' not in imported_by(module), f'{module.name} reads parquet; only the solve job imports lpspec'
+def test_a_reader_imports_no_specsolve(module: Path):
+    assert 'specsolve' not in imported_by(module), f'{module.name} reads parquet; only the solve job imports specsolve'
 
 
 def test_the_loader_ships_every_table(runs: Path, tmp_path: Path):
@@ -44,7 +44,7 @@ def test_the_loader_ships_every_table(runs: Path, tmp_path: Path):
     out = tmp_path / 'runs.zip'
     out.write_bytes(done.stdout)
     names = set(zipfile.ZipFile(out).namelist())
-    assert {'objective.parquet', 'metrics.parquet', 'sources.parquet', 'catalogue.json', 'model.yaml'} <= names
+    assert {'record.parquet', 'metrics.parquet', 'sources.parquet', 'catalogue.json', 'spec.yaml'} <= names
     assert {
         'primal/total.parquet',
         'dual/balance.parquet',
@@ -74,7 +74,7 @@ def test_the_grid_loader_ships_what_the_what_if_page_reads(grid: Path, tmp_path:
     out.write_bytes(done.stdout)
     names = set(zipfile.ZipFile(out).namelist())
     assert {
-        'objective.parquet',
+        'record.parquet',
         'primal/total.parquet',
         'expression/emissions.parquet',
         'dual/carbon.parquet',

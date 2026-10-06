@@ -55,7 +55,7 @@ def create_app(runs: Path) -> FastAPI:
 
     def archived() -> dict[str, dict[str, Any]]:
         """What the directory says, read through the same client the site's loader uses."""
-        if not any(runs.glob('*/answer/objective.parquet')):
+        if not any(runs.glob('*/answer/record.parquet')):
             return {}
         rows = (
             warehouse.records(runs)

@@ -4,7 +4,7 @@ title: Explore
 
 # Explore the archive
 
-This page knows nothing about the model. It lists every quantity the archives hold, reads each one's dimensions off the parquet, and pivots on them: the model's own dimensions group the rows, the scenario splits the columns. Point the solve job at a different lpspec model and this page shows it unchanged.
+This page knows nothing about the model. It lists every quantity the archives hold, reads each one's dimensions off the parquet, and pivots on them: the model's own dimensions group the rows, the scenario splits the columns. Point the solve job at a different specsolve model and this page shows it unchanged.
 
 ```js
 import {pivot} from "./components/pivot.js";

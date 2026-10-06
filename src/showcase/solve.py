@@ -1,6 +1,6 @@
 """The solve job: one archive per scenario, written where the dashboard reads.
 
-This is the only module that imports lpspec. It runs the pathway one period at
+This is the only module that imports specsolve. It runs the pathway one period at
 a time, each period inheriting the fleet the last one left, and archives the
 spec, the sources and the answer under ``<runs>/<scenario>/``.
 
@@ -18,7 +18,7 @@ import shutil
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-import lpspec as lps
+import specsolve as sps
 
 from showcase.scenarios import SCENARIOS, Scenario, grid
 
@@ -37,14 +37,14 @@ def solve(scenario: str, runs: Path, *, replace: bool = False, cases: dict[str, 
     target = runs / scenario
     if replace and target.exists():
         shutil.rmtree(target)
-    runs_ = lps.solve_over(
+    runs_ = sps.solve_over(
         MODEL,
         cases[scenario].sources(),
-        lps.EachCoordinate('year'),
+        sps.EachCoordinate('year'),
         carry={'existing': 'total'},
         archive=target,
     )
-    conditions = runs_.objective['termination_condition'].to_list()
+    conditions = runs_.record['termination_condition'].to_list()
     assert all(c == 'optimal' for c in conditions), f'{scenario}: a period did not solve to optimality: {conditions}'
     return target
 

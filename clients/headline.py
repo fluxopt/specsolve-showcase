@@ -1,4 +1,4 @@
-"""The four headline numbers off an archive, in polars, with no lpspec and no client library.
+"""The four headline numbers off an archive, in polars, with no specsolve and no client library.
 
     uv run python clients/headline.py runs/base
 
@@ -14,11 +14,11 @@ import polars as pl
 
 
 def headline(run: Path) -> dict[str, float]:
-    frames = lambda name: pl.read_parquet(run / 'answer' / name / '*.parquet')
+    frames = lambda name: pl.read_parquet(run / 'answer' / f'{name}.parquet')
     at = lambda frame, year: frame.filter(pl.col('year') == year)['value'].sum()
 
-    objective = pl.read_parquet(run / 'answer/objective.parquet')
-    first, last = objective['year'].min(), objective['year'].max()
+    objective = pl.read_parquet(run / 'answer/record.parquet')
+    first, last = objective['slice'].cast(pl.Int64).min(), objective['slice'].cast(pl.Int64).max()
     emissions, fleet = frames('expression/emissions'), at(frames('primal/total'), last)
     clean = pl.read_parquet(run / 'sources/rate.parquet').filter(pl.col('value') == 0)['generator'].to_list()
 

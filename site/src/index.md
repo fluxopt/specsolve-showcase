@@ -1,7 +1,7 @@
 ---
 title: Pathway
 sql:
-  objective: ./data/runs/objective.parquet
+  objective: ./data/runs/record.parquet
   total: ./data/runs/primal/total.parquet
   build: ./data/runs/primal/build.parquet
   emissions: ./data/runs/expression/emissions.parquet
@@ -21,7 +21,7 @@ sql:
 
 # Capacity-expansion pathway
 
-One model, four scenarios, each solved one investment period at a time with the fleet carried forward. Every number on this page is a query over the parquet that [lpspec](https://github.com/fluxopt/lpspec) archived, run by DuckDB in your browser.
+One model, four scenarios, each solved one investment period at a time with the fleet carried forward. Every number on this page is a query over the parquet that [specsolve](https://github.com/fluxopt/specsolve) archived, run by DuckDB in your browser.
 
 ```js
 import {colorScale, surface} from "./components/palette.js";

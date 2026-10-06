@@ -4,9 +4,9 @@ title: Session
 
 # A modelling session
 
-The other pages are what lpspec produces unattended: a job solves, archives, and this site reads the archive. This page is the other half of the story, a [marimo](https://marimo.io) notebook in which the model is a document you edit by hand. Change the YAML and the typeset math, the validation and the solve follow. Change a number in the data table, or move a slider under the pathway, and the charts re-solve.
+The other pages are what specsolve produces unattended: a job solves, archives, and this site reads the archive. This page is the other half of the story, a [marimo](https://marimo.io) notebook in which the model is a document you edit by hand. Change the YAML and the typeset math, the validation and the solve follow. Change a number in the data table, or move a slider under the pathway, and the charts re-solve.
 
-**It runs in your browser.** Python, the HiGHS solver, polars and lpspec itself load as WebAssembly, so nothing runs on a server and there is nothing to install. The first load fetches about 40 MB and takes a moment; after that every edit to the model, the data or the sliders re-solves on your machine. The code stays out of sight; edit mode, linked below, shows it and lets you change it.
+**It runs in your browser.** Python, the HiGHS solver, polars and specsolve itself load as WebAssembly, so nothing runs on a server and there is nothing to install. The first load fetches about 40 MB and takes a moment; after that every edit to the model, the data or the sliders re-solves on your machine. The code stays out of sight; edit mode, linked below, shows it and lets you change it.
 
 **It needs memory.** After a solve the tab holds about 1 GB, measured in Chromium. A desktop browser takes that in its stride; a phone browser does not, and will reload the page rather than run it. The [What if](./whatif) page answers the pathway's two sliders without any of that, from archives the job solved ahead of time.
 
@@ -22,10 +22,10 @@ ${launch ? html`<iframe src="${app}" title="The modelling session, running in yo
 
 ## Run it on your machine
 
-The notebook is [`notebooks/session.py`](https://github.com/fluxopt/lpspec-showcase/blob/main/notebooks/session.py), a plain Python file. With a local kernel you can also edit the code, not only the model and the data:
+The notebook is [`notebooks/session.py`](https://github.com/fluxopt/specsolve-showcase/blob/main/notebooks/session.py), a plain Python file. With a local kernel you can also edit the code, not only the model and the data:
 
 ```bash
-git clone https://github.com/fluxopt/lpspec-showcase && cd lpspec-showcase
+git clone https://github.com/fluxopt/specsolve-showcase && cd specsolve-showcase
 uv sync --all-extras
 uv run marimo edit notebooks/session.py
 ```

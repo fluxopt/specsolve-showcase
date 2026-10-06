@@ -1,7 +1,7 @@
 ---
 title: What if
 sql:
-  objective: ./data/grid/objective.parquet
+  objective: ./data/grid/record.parquet
   total: ./data/grid/primal/total.parquet
   emissions: ./data/grid/expression/emissions.parquet
   carbon: ./data/grid/dual/carbon.parquet
@@ -68,7 +68,7 @@ const points = grid.toArray().map((d) => ({...d}));
 const solves = points.length * new Set(co2ByYear.toArray().map((d) => d.year)).size;
 // What this page reads, the same files as the front matter names: the browser has them already, so this costs nothing.
 const shipped = [
-  FileAttachment("./data/grid/objective.parquet"), FileAttachment("./data/grid/primal/total.parquet"),
+  FileAttachment("./data/grid/record.parquet"), FileAttachment("./data/grid/primal/total.parquet"),
   FileAttachment("./data/grid/expression/emissions.parquet"), FileAttachment("./data/grid/dual/carbon.parquet"),
   FileAttachment("./data/grid/source/cap.parquet"), FileAttachment("./data/grid/source/invest.parquet"),
   FileAttachment("./data/grid/source/rate.parquet"),

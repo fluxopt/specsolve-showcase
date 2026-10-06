@@ -11,6 +11,6 @@ from pathlib import Path
 from showcase import warehouse
 
 grid = Path(os.environ.get('SHOWCASE_GRID', '../grid'))
-if not any(grid.glob('*/answer/objective.parquet')):
+if not any(grid.glob('*/answer/record.parquet')):
     sys.exit(f'{grid.resolve()} holds no archive: run `showcase-grid --runs {grid}` first')
 sys.stdout.buffer.write(warehouse.bundle(grid))

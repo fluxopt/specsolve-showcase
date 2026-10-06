@@ -6,11 +6,11 @@ An annex is what a reader outside this repository asks for — a regulator, a
 reviewer, a client — and it is the two joined: the equation, in the notation
 the symbols file declares, and under it what the solver made of that equation.
 
-Nothing here imports lpspec. The equations come from math-spec, which has no
+Nothing here imports specsolve. The equations come from mathspec, which has no
 solver in it, and the numbers come from the parquet the solve job archived.
 The join is by declaration name, which is the one key both sides share.
 
-The stitching below is the whole reason ``fluxopt/lpspec#1648`` is open: the
+The stitching below is the whole reason ``fluxopt/specsolve#1648`` is open: the
 typesetter renders a model and the result frames carry the answer, and holding
 one against the other is left to every caller that wants this page.
 """
@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import math_spec
+import mathspec
 import polars as pl
 
 from showcase import warehouse
@@ -79,7 +79,7 @@ def annex(runs: Path, run: str, symbols: Path) -> str:
         Markdown: a period table, then one section per kind, then one
         subsection per declaration with its equation and its numbers.
     """
-    model = runs / run / 'model.yaml'
+    model = runs / run / 'spec.yaml'
     records = warehouse.records(runs).filter(pl.col('run') == run).sort('year')
     catalogue = warehouse.catalogue(runs)
 
@@ -95,7 +95,7 @@ def annex(runs: Path, run: str, symbols: Path) -> str:
             continue
         out.append(f'## {heading}\n\n{gloss[0].upper() + gloss[1:]}.\n')
         for entry in rows.iter_rows(named=True):
-            line = math_spec.typeset_declaration(model, entry['name'], 'markdown', symbols=symbols)
+            line = mathspec.typeset_declaration(model, entry['name'], 'markdown', symbols=symbols)
             frame = warehouse.frame(runs, kind, entry['name']).filter(pl.col('run') == run)
             keyed = ', '.join(f'`{d}`' for d in entry['dims']) or 'nothing'
             out.append(f'### {entry["name"]}\n\nKeyed by {keyed}.\n\n```tex\n{line}\n```\n\n{_summary(kind, frame)}')
