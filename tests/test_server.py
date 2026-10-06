@@ -6,12 +6,14 @@ every existing reader sees it with no change, and that the registry survives
 the process because it was never in the process to begin with.
 """
 
+import threading
 import time
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
+from server import jobs
 from server.app import create_app
 from showcase import warehouse
 from showcase.scenarios import SCENARIOS
@@ -67,9 +69,21 @@ def test_the_registry_outlives_the_process_that_wrote_it(served: TestClient, tmp
     assert fresh.get('/runs/carbon_cap').json()['state'] == 'absent'
 
 
-def test_a_scenario_already_in_flight_is_refused_rather_than_queued_twice(served: TestClient):
+def test_a_scenario_already_in_flight_is_refused_rather_than_queued_twice(
+    served: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    """The first solve is held until the second request is answered, so the refusal does not race the solver."""
+    release = threading.Event()
+    solve = jobs.solve
+
+    def held(*args, **kwargs):
+        assert release.wait(60), 'the test never released the solve'
+        return solve(*args, **kwargs)
+
+    monkeypatch.setattr(jobs, 'solve', held)
     assert served.post('/runs/base').status_code == 202
     second = served.post('/runs/base')
+    release.set()
     assert second.status_code == 409
     assert 'already in flight' in second.json()['detail']
     wait_for(served, 'base', 'archived')
