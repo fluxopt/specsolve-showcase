@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 import itertools
 import math
+import random
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -180,3 +181,164 @@ def grid() -> dict[str, Scenario]:
         described = f'{"no cap" if cap is None else f"{cap:,.0f} t of CO2"} in {YEARS[-1]}, solar at {solar:.0%}'
         points[name] = Scenario(name, described, functools.partial(_point, cap, solar))
     return points
+
+
+#: The hedge: the pathway's 2035, planned once against many futures rather than
+#: once per scenario. The fleet is built before the future is known and run in
+#: each of them, so what is built is a hedge across all of them at once.
+HEDGE_YEAR = 2035
+HEDGE_GENERATORS = [*GENERATORS, 'peaker']
+
+#: How many futures the plan weighs, each equally likely, and the seed they are drawn from.
+FUTURES = 60
+SEED = 2035
+
+#: A peaker is cheap to build and dear to run: insurance against the futures that need it.
+PEAKER = {'invest': 22000.0, 'fuel': 1.6, 'rate': 0.6}
+
+#: What a MWh of demand left unserved costs.
+VOLL = 3000.0
+
+#: Where the tail begins: the worst tenth of the futures.
+ALPHA = 0.9
+
+#: How much of the operating cost is priced in the tail. One is left out: a plan
+#: that prices nothing but the tail is indifferent to how the other futures run.
+OMEGAS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+
+@dataclass(frozen=True)
+class Future:
+    """What one future draws: how much demand grew, what gas costs, and how the weather ran."""
+
+    name: str
+    growth: float
+    gas: float
+    wind: float
+    solar: float
+    lull: bool
+
+
+def futures(n: int = FUTURES, seed: int = SEED) -> list[Future]:
+    """Draw ``n`` futures, the same ones for the same seed.
+
+    Demand and the gas price are lognormal, so a few futures run far above the
+    rest. One winter in ten is a lull, when the wind drops to a quarter of its
+    usual output for the whole typical day.
+    """
+    rng = random.Random(seed)
+    drawn = []
+    for i in range(n):
+        drawn.append(
+            Future(
+                name=f'f{i:02d}',
+                growth=round(GROWTH[HEDGE_YEAR] * rng.lognormvariate(0, 0.08), 4),
+                gas=round(FUEL[HEDGE_YEAR] * rng.lognormvariate(0, 0.35), 2),
+                wind=round(min(max(rng.gauss(1, 0.15), 0.5), 1.4), 4),
+                solar=round(min(max(rng.gauss(1, 0.08), 0.7), 1.2), 4),
+                lull=rng.random() < 0.1,
+            )
+        )
+    return drawn
+
+
+def _future_avail(future: Future, generator: str, day: str, hour: int) -> float:
+    base = _avail('gas' if generator == 'peaker' else generator, day, hour)
+    if generator == 'wind':
+        return min(base * future.wind * (0.25 if future.lull and day == 'winter' else 1.0), 1.0)
+    if generator == 'solar':
+        return min(base * future.solar, 1.0)
+    return base
+
+
+def _fuel(future: Future, generator: str) -> float:
+    return {'gas': future.gas, 'peaker': future.gas * PEAKER['fuel']}.get(generator, 0.0)
+
+
+def hedge_sources(
+    drawn: list[Future], *, omega: float = 0.0, build: dict[str, float] | None = None
+) -> dict[str, pl.DataFrame]:
+    """The sources of the hedge over the drawn futures, each equally likely.
+
+    ``build`` pins what is built, generator by generator, so the plan is run
+    rather than chosen; ``None`` leaves each between nothing and 1000 MW.
+    """
+    invest = {**INVEST[HEDGE_YEAR], 'peaker': PEAKER['invest']}
+    rate = {**RATE, 'peaker': PEAKER['rate']}
+    existing = {**EXISTING, 'peaker': 0.0}
+    names = [f.name for f in drawn]
+    return {
+        'future': pl.DataFrame({'future': names}),
+        'day': pl.DataFrame({'day': DAYS}),
+        'hour': pl.DataFrame({'hour': HOURS}),
+        'generator': pl.DataFrame({'generator': HEDGE_GENERATORS}),
+        'probability': pl.DataFrame({'future': names, 'value': [1 / len(drawn)] * len(drawn)}),
+        'weight': pl.DataFrame({'day': DAYS, 'value': [WEIGHT[d] for d in DAYS]}),
+        'load': pl.DataFrame(
+            [
+                {'future': f.name, 'day': d, 'hour': h, 'value': round(PEAK[d] * f.growth * _load_shape(d, h), 3)}
+                for f in drawn
+                for d in DAYS
+                for h in HOURS
+            ]
+        ),
+        'avail': pl.DataFrame(
+            [
+                {'future': f.name, 'day': d, 'hour': h, 'generator': g, 'value': round(_future_avail(f, g, d, h), 4)}
+                for f in drawn
+                for d in DAYS
+                for h in HOURS
+                for g in HEDGE_GENERATORS
+            ]
+        ),
+        'invest': pl.DataFrame({'generator': HEDGE_GENERATORS, 'value': [invest[g] for g in HEDGE_GENERATORS]}),
+        'cost': pl.DataFrame(
+            [{'future': f.name, 'generator': g, 'value': _fuel(f, g)} for f in drawn for g in HEDGE_GENERATORS]
+        ),
+        'rate': pl.DataFrame({'generator': HEDGE_GENERATORS, 'value': [rate[g] for g in HEDGE_GENERATORS]}),
+        'voll': pl.DataFrame({'value': [VOLL]}),
+        'existing': pl.DataFrame({'generator': HEDGE_GENERATORS, 'value': [existing[g] for g in HEDGE_GENERATORS]}),
+        'build_min': pl.DataFrame(
+            {'generator': HEDGE_GENERATORS, 'value': [(build or {}).get(g, 0.0) for g in HEDGE_GENERATORS]}
+        ),
+        'build_max': pl.DataFrame(
+            {'generator': HEDGE_GENERATORS, 'value': [(build or {}).get(g, 1000.0) for g in HEDGE_GENERATORS]}
+        ),
+        'alpha': pl.DataFrame({'value': [ALPHA]}),
+        'omega': pl.DataFrame({'value': [omega]}),
+    }
+
+
+def alone(sources: dict[str, pl.DataFrame], future: str) -> dict[str, pl.DataFrame]:
+    """The hedge's sources narrowed to one future, which is then certain.
+
+    What a planner with perfect foresight solves: the fleet is chosen knowing
+    which future arrives.
+    """
+    narrowed = {k: v.filter(pl.col('future') == future) if 'future' in v.columns else v for k, v in sources.items()}
+    return {**narrowed, 'probability': narrowed['probability'].with_columns(value=pl.lit(1.0))}
+
+
+def expected(sources: dict[str, pl.DataFrame]) -> dict[str, pl.DataFrame]:
+    """The hedge's sources with every input that varies by future replaced by its expectation, as one certain future.
+
+    What a planner who plans against the average solves. The future is named ``average``.
+    """
+    probability = sources['probability'].rename({'value': 'probability'})
+    averaged = {}
+    for name, table in sources.items():
+        if name in {'future', 'probability'} or 'future' not in table.columns:
+            continue
+        keys = [c for c in table.columns if c not in {'future', 'value'}]
+        averaged[name] = (
+            table.join(probability, on='future')
+            .group_by(keys, maintain_order=True)
+            .agg((pl.col('value') * pl.col('probability')).sum())
+            .select(pl.lit('average').alias('future'), *keys, 'value')
+        )
+    return {
+        **sources,
+        **averaged,
+        'future': pl.DataFrame({'future': ['average']}),
+        'probability': pl.DataFrame({'future': ['average'], 'value': [1.0]}),
+    }

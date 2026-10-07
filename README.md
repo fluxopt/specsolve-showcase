@@ -14,8 +14,10 @@ showcase-solve ──┐                                    ┌──▶ observa
    (specsolve)      ├──▶ runs/<scenario>/ ───────────────┤     (Python loaders)     (DuckDB-WASM
 showcase-serve ──┘      (parquet + yaml)              │                           + Plot
    (specsolve, on request)                               ├──▶ clients/, a DuckDB shell, a notebook
-showcase-grid ─────▶ grid/<point>/ ───────────────────┘
-   (specsolve, 110 points)  (the same archive)
+showcase-grid ─────▶ grid/<point>/ ───────────────────┤
+   (specsolve, 110 points)  (the same archive)            │
+showcase-hedge ────▶ hedge/<plan>/ ───────────────────┘
+   (specsolve, 72 plans)    (the same archive)
 ```
 
 The point of the repository is the middle box. specsolve archives a solve as tidy
@@ -33,6 +35,7 @@ Requires Python 3.12, [uv](https://docs.astral.sh/uv/) and Node 20 or later.
 uv sync --all-extras
 uv run showcase-solve --runs runs       # four scenarios, four periods each, a few seconds
 uv run showcase-grid --runs grid        # the what-if grid: 110 pathways, in parallel, about ten seconds
+uv run showcase-hedge --runs hedge      # one period against 60 futures: 72 plans, in parallel, about ten seconds
 uv run marimo export html notebooks/session.py -o site/src/session.html
 cd site && npm ci && npm run dev        # the site, live, with the loader re-run on edit
 uv run marimo edit notebooks/session.py # the notebook, live, with a local kernel
@@ -106,8 +109,8 @@ order by run, year;
 Both need `runs/` to exist: it is what the solve job writes, and it is not
 checked in.
 
-The deploy publishes both directories under the site, at
-`https://fluxopt.github.io/specsolve-showcase/archive/runs/` and `…/archive/grid/`,
+The deploy publishes all three directories under the site, at
+`https://fluxopt.github.io/specsolve-showcase/archive/runs/`, `…/archive/grid/` and `…/archive/hedge/`,
 so a client needs nothing but HTTP. A static host cannot answer a glob, so
 [`tools/publish_archive.py`](tools/publish_archive.py) writes every glob down:
 `archive/runs/base/answer/primal/total.parquet` is one archive's file, and
@@ -204,6 +207,46 @@ the component's, not the page's. Point the solve job at a different specsolve
 model and that page shows it unchanged. That is the property this repository
 exists to demonstrate.
 
+## Planning against many futures
+
+The pathway plans against one future at a time: a scenario is a guess, and
+the fleet is right for that guess alone. [`models/hedge.yaml`](models/hedge.yaml)
+is the pathway's 2035 planned once against 60 futures at once. Each future
+draws its own demand, wind and solar years, and gas price, and one winter in
+ten is a lull with a quarter of the usual wind. `build` spans no future,
+because it is chosen before anyone knows which one arrives; the dispatch `p`
+and the demand left unserved, `shed`, are chosen in each future. A peaker,
+cheap to build and dear to run, joins the three technologies as the insurance
+a plan can buy.
+
+The objective blends what the fleet is expected to cost to run with what it
+costs in the worst tenth of the futures, the conditional value at risk, in the
+linear form Rockafellar and Uryasev give it. `omega` is the weight on the
+tail. [`showcase-hedge`](src/showcase/solve.py) archives, under `hedge/`:
+
+| archive | what it is |
+|---|---|
+| `risk-000` … `risk-090` | the plan at a weight on the tail from 0 to 0.9 |
+| `perfect-f00` … `perfect-f59` | the plan made knowing which future arrives, one per future |
+| `average` | the plan made against the expected future alone |
+| `average-tested` | that plan's fleet, pinned, run in every future |
+
+The four kinds answer the two questions stochastic planning is measured by.
+The value of perfect information is `risk-000` less the mean of the
+`perfect-*` objectives. The value of the stochastic solution is
+`average-tested` less `risk-000`: what planning against the average costs.
+Every hour of every future is archived, so a reader can plot dispatch and
+price in any future of any plan.
+
+Two things a reader of the duals needs. The `balance` dual is the price
+multiplied by the day's weight and by the future's risk-adjusted probability,
+`(1 - omega) * probability + tail_excess`, where `tail_excess` is that
+constraint's dual; divide both back to read a price. And at a weight of zero,
+`var` and `cvar` carry no weight in the objective, so their values are
+arbitrary: compute the tail from each future's `opex` instead. A weight of
+one is left out for the same reason: the futures outside the tail would carry
+no weight, so how they run would be arbitrary.
+
 ## The modelling session
 
 The site is what specsolve produces unattended. [`notebooks/session.py`](notebooks/session.py)
@@ -238,12 +281,16 @@ notebook as it ran at the last build, a static export, as the fallback.
 - every point of the what-if grid supplies the model's inputs, caps only the
   last period, and archives the cap and solar cost the page keys it by; the
   grid's loader ships the tables the page reads;
+- every plan of the hedge supplies the same inputs; the average plan, run in
+  every future, costs more than the hedge and leaves demand unserved; the
+  tail duals sum to the weight on the tail; and a shed hour is priced at the
+  value of lost load once the dual is divided back;
 - nothing past the solve job imports specsolve; the site's data loader ships every
   table the pages read, or says what is missing; and the model page prints the
   archived spec as TeX in the site's own delimiters;
 - the notebook runs top to bottom and exports with both solves optimal.
 
-CI runs the same, then the pipeline end to end: the job and the grid, then the site build.
+CI runs the same, then the pipeline end to end: the job, the grid and the hedge, then the site build.
 A push to `main` also deploys the site to GitHub Pages.
 
 ## Solving on request
