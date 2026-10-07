@@ -1200,7 +1200,7 @@ wheels = [
 
 [[package]]
 name = "specsolve"
-version = "0.6.1"
+version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "highspy" },
@@ -1208,9 +1208,9 @@ dependencies = [
     { name = "numpy" },
     { name = "polars" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/5b/20e7860c600e0cd2487ad46939a4007295137c323e0ababca35e3f487313/specsolve-0.6.1.tar.gz", hash = "sha256:e8369345bdafa0b69f3e86ba4c8df8b55992730b750f31e5bcd470f34da1810f", size = 151647, upload-time = "2026-10-06T15:52:49.002Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/b8/e2a3028120b29237cb39d42d51a2d52f1fa82b754732e2e2930488613aae/specsolve-0.6.2.tar.gz", hash = "sha256:d4f0c378aca8a5b45c6c46816cf446b2c2c9b3b24c92977583d64e6d9edcfec0", size = 151807, upload-time = "2026-10-07T06:34:45.807Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b1/9e/932e94a1f3aa0d3ab8ef9c8d6a37ed28c1a8c26b2f7a3a8ab383d046757d/specsolve-0.6.1-py3-none-any.whl", hash = "sha256:8de0ee9e1f6f9345dd9eaf3998acd0986dd710311f73e8743ab8eb952671fff4", size = 182562, upload-time = "2026-10-06T15:52:47.331Z" },
+    { url = "https://files.pythonhosted.org/packages/96/b2/c12c61c0d90660d884cfc707e1dae7fb666b9e92c8295f867e320c000aa8/specsolve-0.6.2-py3-none-any.whl", hash = "sha256:e656add440083cd69d3e01fa3755d0fe73c616470c896cd7ecd775d656f1edd0", size = 182704, upload-time = "2026-10-07T06:34:44.076Z" },
 ]
 
 [[package]]
@@ -1255,7 +1255,7 @@ requires-dist = [
     { name = "marimo", marker = "extra == 'lab'", specifier = ">=0.15" },
     { name = "polars", specifier = ">=1.30" },
     { name = "pyarrow", specifier = ">=17" },
-    { name = "specsolve", marker = "extra == 'solve'", specifier = ">=0.6.1,<0.7" },
+    { name = "specsolve", marker = "extra == 'solve'", specifier = ">=0.6.2,<0.7" },
     { name = "specsolve-showcase", extras = ["solve"], marker = "extra == 'lab'" },
     { name = "specsolve-showcase", extras = ["solve"], marker = "extra == 'server'" },
     { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.30" },
