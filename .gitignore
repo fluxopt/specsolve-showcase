@@ -9,6 +9,8 @@ dist/
 runs/
 # The what-if grid, the same kind of archive; regenerate with `showcase-grid`.
 grid/
+# The hedge, one period planned against many futures; regenerate with `showcase-hedge`.
+hedge/
 # The site: dependencies, the data-loader cache, and the build Pages serves.
 site/node_modules/
 site/dist/

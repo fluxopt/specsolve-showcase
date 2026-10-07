@@ -29,6 +29,7 @@ jobs:
       # The two halves, end to end: the job writes the archives, the site builds from them.
       - run: uv run showcase-solve --runs runs
       - run: uv run showcase-grid --runs grid
+      - run: uv run showcase-hedge --runs hedge
       - run: uv run marimo export html notebooks/session.py -o site/src/session.html
       - run: npm ci
         working-directory: site
@@ -37,7 +38,7 @@ jobs:
         env:
           OBSERVABLE_TELEMETRY_DISABLE: "true"
       # The archives themselves, beside the site, for any client that reads parquet over HTTP.
-      - run: uv run python -m tools.publish_archive site/dist/archive runs grid
+      - run: uv run python -m tools.publish_archive site/dist/archive runs grid hedge
       # The notebook, executable in the browser: marimo's WASM export, with our
       # wheels and the pathway model beside it, published under the site.
       - run: uv run marimo export html-wasm notebooks/session.py -o site/dist/session-app --mode run --execute --no-sandbox

@@ -1,0 +1,102 @@
+description: >-
+  One investment period planned against many futures at once: the fleet is
+  built before anyone knows which future arrives, and run after. Each future
+  draws its own demand, weather and gas price. The plan weighs what the fleet
+  is expected to cost to run against what it costs in the worst futures, by
+  the conditional value at risk.
+version: 0
+
+dimensions:
+  future: {dtype: str, description: "the futures the fleet is built against, one of which will happen"}
+  day: {dtype: str, description: "typical days, each standing for many real ones"}
+  hour: {dtype: int, description: "hours within a typical day"}
+  generator: {dtype: str, description: "generating technologies"}
+
+parameters:
+  probability: {dims: [future], description: "how likely a future is; the weights the expectation is taken with"}
+  weight: {dims: [day], description: "how many real days this typical day represents"}
+  load: {dims: [future, day, hour], description: "demand to be met in a future, in MW"}
+  avail: {dims: [future, day, hour, generator], description: "capacity factor in a future, between 0 and 1"}
+  invest: {dims: [generator], description: "annualised build cost per MW"}
+  cost: {dims: [future, generator], description: "variable cost per MWh in a future"}
+  rate: {dims: [generator], description: "tonnes of CO2 per MWh"}
+  voll: {dims: [], description: "what a MWh of demand left unserved costs"}
+  existing: {dims: [generator], description: "capacity standing before the period, in MW"}
+  build_min: {dims: [generator], description: "the least that must be built, in MW"}
+  build_max: {dims: [generator], description: "the most that may be built, in MW"}
+  alpha: {dims: [], description: "where the tail begins: the worst 1 - alpha of the probability is the tail"}
+  omega: {dims: [], description: "how much of the operating cost is priced in the tail rather than in expectation, from 0 up to but not including 1"}
+
+variables:
+  build:
+    description: capacity added in this period, the one decision taken before the future is known
+    dims: [generator]
+    bounds: {lower: build_min, upper: build_max}
+  total:
+    description: capacity standing after this period's build
+    dims: [generator]
+    bounds: {lower: 0}
+  p:
+    description: output of a technology in one hour of a typical day of a future
+    dims: [future, day, hour, generator]
+    bounds: {lower: 0}
+  shed:
+    description: demand left unserved in one hour of a typical day of a future
+    dims: [future, day, hour]
+    bounds: {lower: 0}
+  excess:
+    description: how far a future's operating cost runs past the value at risk, and zero for the futures that stay below it
+    dims: [future]
+    bounds: {lower: 0}
+  var:
+    description: the value at risk, the operating cost the tail begins at
+    dims: []
+  cvar:
+    description: the conditional value at risk, the expected operating cost of the futures in the tail
+    dims: []
+
+expressions:
+  capex:
+    description: annualised cost of what this period built
+    expression: invest * build
+  opex:
+    description: what running the fleet costs across the year in a future, unserved demand included
+    expression: sum(weight * cost * p, over=[day, hour, generator]) + sum(weight * voll * shed, over=[day, hour])
+  emissions:
+    description: CO2 released across the year in a future
+    expression: sum(weight * rate * p, over=[day, hour, generator])
+  unserved:
+    description: demand left unserved across the year in a future, in MWh
+    expression: sum(weight * shed, over=[day, hour])
+
+constraints:
+  accumulate:
+    description: what stands is what was there plus what was built
+    dims: [generator]
+    expression: total == existing + build
+  capacity:
+    description: output is capped by the standing capacity, derated by the future's availability
+    dims: [future, day, hour, generator]
+    expression: p <= total * avail
+  balance:
+    description: the fleet and the shed demand meet the load in every hour of every typical day of every future
+    dims: [future, day, hour]
+    expression: sum(p, over=generator) + shed == load
+  tail_excess:
+    description: a future's excess is at least its operating cost past the value at risk
+    dims: [future]
+    expression: excess >= opex - var
+  tail:
+    description: >-
+      the conditional value at risk is at least the value at risk plus the
+      expected excess divided by the tail's probability, both sides multiplied
+      by that probability
+    dims: []
+    expression: (1 - alpha) * (cvar - var) >= sum(probability * excess)
+
+objective:
+  sense: minimize
+  description: >-
+    what the fleet costs to build, plus a blend of what it is expected to cost
+    to run and what it costs to run in the tail
+  expression: sum(capex) + (1 - omega) * sum(probability * opex) + omega * cvar
