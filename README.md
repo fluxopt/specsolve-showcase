@@ -106,6 +106,20 @@ order by run, year;
 Both need `runs/` to exist: it is what the solve job writes, and it is not
 checked in.
 
+The deploy publishes both directories under the site, at
+`https://fluxopt.github.io/specsolve-showcase/archive/runs/` and `…/archive/grid/`,
+so a client needs nothing but HTTP. A static host cannot answer a glob, so
+[`tools/publish_archive.py`](tools/publish_archive.py) writes every glob down:
+`archive/runs/base/answer/primal/total.parquet` is one archive's file, and
+`archive/runs/answer/primal/total.parquet` is that path across every archive.
+`archive/runs/catalog.parquet` lists every run and every path, so it is the
+one file a client has to know about:
+
+```sql
+select specsolve_run as run, year, generator, value
+from read_parquet('https://fluxopt.github.io/specsolve-showcase/archive/runs/answer/primal/total.parquet');
+```
+
 [`clients/`](clients/) takes that further: `headline.py` and `headline.sql`
 answer the same four questions off the archive, in polars and in DuckDB, and
 neither imports anything this repository ships. `tests/test_clients.py` holds
