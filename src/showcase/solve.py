@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -29,23 +30,34 @@ def solve(scenario: str, runs: Path, *, replace: bool = False, cases: dict[str, 
     """Solve one scenario into ``runs/<scenario>/`` and return that directory.
 
     An archive is written whole, so a directory that already exists is refused
-    unless ``replace`` is set, in which case it is removed first. Every period
-    is asserted to have solved to optimality: a dashboard that quietly shows a
-    partial pathway is worse than a job that fails. ``cases`` is where the
-    name is looked up: the four scenarios, or the points of :func:`grid`.
+    unless ``replace`` is set. The archive is written under a hidden directory
+    of ``runs`` and renamed into place, so a reader globbing ``runs/*/`` never
+    sees one half-written, and an archive being replaced stays readable until
+    the new one lands. Every period is asserted to have solved to optimality
+    before it lands: a dashboard that quietly shows a partial pathway is worse
+    than a job that fails. ``cases`` is where the name is looked up: the four
+    scenarios, or the points of :func:`grid`.
     """
     target = runs / scenario
-    if replace and target.exists():
-        shutil.rmtree(target)
-    runs_ = sps.solve_over(
-        MODEL,
-        cases[scenario].sources(),
-        sps.EachCoordinate('year'),
-        carry={'existing': 'total'},
-        archive=target,
-    )
-    conditions = runs_.record['termination_condition'].to_list()
-    assert all(c == 'optimal' for c in conditions), f'{scenario}: a period did not solve to optimality: {conditions}'
+    if target.exists() and not replace:
+        raise FileExistsError(f'{target} already holds something; pass replace=True to solve it again')
+    runs.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=runs, prefix='.') as staging:
+        written = Path(staging) / scenario
+        runs_ = sps.solve_over(
+            MODEL,
+            cases[scenario].sources(),
+            sps.EachCoordinate('year'),
+            carry={'existing': 'total'},
+            archive=written,
+        )
+        conditions = runs_.record['termination_condition'].to_list()
+        assert all(c == 'optimal' for c in conditions), (
+            f'{scenario}: a period did not solve to optimality: {conditions}'
+        )
+        if target.exists():
+            target.rename(Path(staging) / 'replaced')
+        written.rename(target)
     return target
 
 
