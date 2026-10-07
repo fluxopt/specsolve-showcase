@@ -19,7 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # What the solve job needs on top.
-solve = ["specsolve>=0.6.1,<0.7"]
+solve = ["specsolve>=0.6.2,<0.7"]
 # What the modelling-session notebook needs on top of the solve job.
 lab = ["specsolve-showcase[solve]", "marimo>=0.15", "altair>=5.4"]
 # What the solve server needs on top of the solve job. Nothing else in the
