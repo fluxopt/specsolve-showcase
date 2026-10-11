@@ -29,7 +29,6 @@ def tree(root: Path) -> str:
     rows = [
         ('├── spec.yaml', kb(root / 'spec.yaml'), 'the spec, as solved'),
         ('├── catalog.parquet', kb(root / 'catalog.parquet'), 'every name, its kind, path and dimensions'),
-        ('├── sources.parquet', kb(root / 'sources.parquet'), '(specsolve_run, source, digest)'),
         ('├── sources/', f'{len(list((root / "sources").glob("*.parquet")))} files', 'every input, as solved'),
         ('└── answer/', '', ''),
         ('    ├── record.parquet', kb(answer / 'record.parquet'), 'one row per period: status, objective'),
@@ -50,7 +49,6 @@ title: Clients
 sql:
   objective: ./data/runs/record.parquet
   metrics: ./data/runs/metrics.parquet
-  digests: ./data/runs/sources.parquet
   total: ./data/runs/primal/total.parquet
   emissions: ./data/runs/expression/emissions.parquet
 ---
@@ -70,7 +68,7 @@ runs/{run}/
 {tree(runs / run)}
 ```
 
-Three kinds of thing are in there. **`spec.yaml` and `sources/`** are what was solved — the spec and every input, so the run reproduces. **`answer/`** is what came back: `primal/` per variable, `dual/` per constraint, `expression/` per named quantity, one file each. **`record.parquet`, `metrics.parquet` and `sources.parquet`** are the record: one row per period saying how it terminated, what it cost to build and solve, and what each input's bytes digest to.
+Three kinds of thing are in there. **`spec.yaml` and `sources/`** are what was solved — the spec and every input, so the run reproduces. **`answer/`** is what came back: `primal/` per variable, `dual/` per constraint, `expression/` per named quantity, one file each. **`record.parquet` and `metrics.parquet`** are the record: one row per period saying how it terminated, which solver and specsolve solved it, and what it cost to build and solve.
 
 ## What a query gets back
 
@@ -107,13 +105,12 @@ display(Inputs.table(catalogue.map((d) => ({{kind: d.kind, name: d.name, "keyed 
 
 ## Run one yourself
 
-The tables above are registered; edit the query and it re-runs. `objective`, `metrics`, `digests`, `total` and `emissions` are in scope.
+The tables above are registered; edit the query and it re-runs. `objective`, `metrics`, `total` and `emissions` are in scope.
 
 ```js
 const db = await DuckDBClient.of({{
   objective: FileAttachment("data/runs/record.parquet"),
   metrics: FileAttachment("data/runs/metrics.parquet"),
-  digests: FileAttachment("data/runs/sources.parquet"),
   total: FileAttachment("data/runs/primal/total.parquet"),
   emissions: FileAttachment("data/runs/expression/emissions.parquet"),
 }});

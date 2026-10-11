@@ -77,7 +77,6 @@ runs/base/
     spec.yaml                           the spec, as solved
     catalog.parquet                     (specsolve_run, path, name, kind, description, dtype, column, dim)
     sources/<name>.parquet              every input, as solved
-    sources.parquet                     (specsolve_run, source, digest)
     axis.json                           how the sources were sliced
     answer/
         record.parquet                  (slice_axis, slice, status, termination_condition, objective, …, specsolve_run)

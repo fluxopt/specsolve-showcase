@@ -74,12 +74,12 @@ def test_the_clients_page_teaches_the_archive_rather_than_printing_a_result(runs
     )
 
     front = page.split('---')[1]
-    for table in ('objective', 'metrics', 'digests', 'total', 'emissions'):
+    for table in ('objective', 'metrics', 'total', 'emissions'):
         assert f'{table}: ./data/runs/' in front, f'{table} is registered, so the live queries can reach it'
 
     for kind in ('primal/', 'dual/', 'expression/'):
         assert kind in page, f'the tree names {kind}, which is what the archive is made of'
-    assert 'spec.yaml' in page and 'sources.parquet' in page
+    assert 'spec.yaml' in page and 'sources/' in page
 
     assert page.count('```sql id=') == 2, 'the two record queries are live, and their SQL is shown'
     assert 'DuckDBClient.of(' in page and 'db.query(typed)' in page, 'and the last one is editable'

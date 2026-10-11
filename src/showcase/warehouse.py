@@ -7,6 +7,7 @@ the archive's directory name; the tables here call it ``run``.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import shutil
@@ -31,8 +32,17 @@ def metrics(runs: Path) -> pl.DataFrame:
 
 
 def inputs(runs: Path) -> pl.DataFrame:
-    """One row per run and source: what each input's bytes digest to."""
-    return _union(runs, 'sources.parquet').sort('run', 'source')
+    """One row per run and source: a digest of the input's rows, the same for the same rows in any run.
+
+    The archive keeps every input, not a digest of it, so the digest is taken
+    here, over the rows sorted and without ``specsolve_run``.
+    """
+    rows = []
+    for path in sorted(runs.glob('*/sources/*.parquet')):
+        table = pl.read_parquet(path).drop('specsolve_run')
+        digest = hashlib.sha256(table.sort(table.columns).write_csv().encode()).hexdigest()
+        rows.append({'run': path.parent.parent.name, 'source': path.stem, 'digest': digest})
+    return pl.DataFrame(rows, schema={'run': pl.String, 'source': pl.String, 'digest': pl.String})
 
 
 def catalogue(runs: Path) -> pl.DataFrame:
@@ -68,13 +78,13 @@ def frame(runs: Path, kind: str, name: str) -> pl.DataFrame:
 
 
 def changed_inputs(runs: Path, base: str, other: str) -> list[str]:
-    """The sources whose bytes differ between two runs, by name."""
+    """The sources whose rows differ between two runs, by name."""
     digests = inputs(runs).pivot('run', index='source', values='digest')
     return digests.filter(pl.col(base) != pl.col(other))['source'].sort().to_list()
 
 
 def bundle(runs: Path) -> bytes:
-    """The whole directory as one zip: the record tables, one frame per catalogue entry across every run, the catalogue, and the model.
+    """The whole directory as one zip: the record tables, a digest of every input, one frame per catalogue entry across every run, the catalogue, and the model.
 
     What the site ships, whichever directory it reads: the scenarios and the
     what-if grid are bundled by the same call.
@@ -90,7 +100,7 @@ def bundle(runs: Path) -> bytes:
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
         zf.writestr('record.parquet', parquet(records(runs)))
         zf.writestr('metrics.parquet', parquet(metrics(runs)))
-        zf.writestr('sources.parquet', parquet(inputs(runs)))
+        zf.writestr('digests.parquet', parquet(inputs(runs)))
         for row in listed.iter_rows(named=True):
             zf.writestr(f'{row["kind"]}/{row["name"]}.parquet', parquet(frame(runs, row['kind'], row['name'])))
         zf.writestr('catalogue.json', json.dumps(listed.to_dicts(), indent=1))
