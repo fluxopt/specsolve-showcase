@@ -3,15 +3,15 @@ title: Provenance
 sql:
   objective: ./data/runs/record.parquet
   metrics: ./data/runs/metrics.parquet
-  sources: ./data/runs/sources.parquet
+  digests: ./data/runs/digests.parquet
 ---
 
 # Where the numbers came from
 
-Each archive records how every period terminated, what the model cost to build and solve, a digest of the spec it answered, and a digest of every input. So two runs can say which input differs between them without reading either one.
+Each archive records how every period terminated, what the model cost to build and solve, which specsolve solved it, and every input as solved. The loader digests each input, so two runs can say which input differs between them without comparing the rows here.
 
 ```sql id=runs
-select distinct run from sources order by run
+select distinct run from digests order by run
 ```
 
 ```js
@@ -22,18 +22,18 @@ const other = view(Inputs.select(scenarios, {label: "and", value: scenarios[1] ?
 
 ```sql id=changed
 select a.source
-from sources a join sources b using (source)
+from digests a join digests b using (source)
 where a.run = ${one} and b.run = ${other} and a.digest <> b.digest
 order by source
 ```
 
 <div class="card">
   <h2>Which input differs</h2>
-  <p>${changed.numRows ? changed.toArray().map((d) => html`<code>${d.source}</code>`) : html`<em>the same bytes on every input</em>`}</p>
+  <p>${changed.numRows ? changed.toArray().map((d) => html`<code>${d.source}</code>`) : html`<em>the same rows on every input</em>`}</p>
 </div>
 
 ```sql id=solves
-select run, year::integer as year, status, termination_condition, objective, spec_digest, solved_at from objective order by run, year
+select run, year::integer as year, status, termination_condition, objective, specsolve_version, solved_at from objective order by run, year
 ```
 
 ```sql id=cost

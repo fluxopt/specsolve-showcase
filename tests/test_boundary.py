@@ -44,7 +44,7 @@ def test_the_loader_ships_every_table(runs: Path, tmp_path: Path):
     out = tmp_path / 'runs.zip'
     out.write_bytes(done.stdout)
     names = set(zipfile.ZipFile(out).namelist())
-    assert {'record.parquet', 'metrics.parquet', 'sources.parquet', 'catalogue.json', 'spec.yaml'} <= names
+    assert {'record.parquet', 'metrics.parquet', 'digests.parquet', 'catalogue.json', 'spec.yaml'} <= names
     assert {
         'primal/total.parquet',
         'dual/balance.parquet',

@@ -33,7 +33,7 @@ def test_the_archive_holds_the_contract(runs: Path):
     for name in SOLVED:
         archive = runs / name
         assert (archive / 'spec.yaml').exists()
-        assert (archive / 'sources.parquet').exists()
+        assert (archive / 'sources' / 'load.parquet').exists()
         assert (archive / 'answer' / 'record.parquet').exists()
         assert (archive / 'answer' / 'sweep.json').exists(), 'a sweep archive carries its manifest'
         total = pl.read_parquet(archive / 'answer' / 'primal' / 'total.parquet')
